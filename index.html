@@ -158,17 +158,17 @@
   <main>
     <section>
       <h2>仓库设置</h2>
-      <label>GitHub Token</label>
-      <input id="token" type="password" autocomplete="off" placeholder="ghp_... 或 fine-grained token">
+      <div id="tokenEntry">
+        <label>GitHub Token</label>
+        <input id="token" type="password" autocomplete="off" placeholder="ghp_... 或 fine-grained token">
+      </div>
+      <div id="tokenSaved" style="display: none;">
+        <p class="muted">GitHub Token 已保存在当前浏览器本地。</p>
+        <button id="resetToken" type="button">重置 Token</button>
+      </div>
       <label>用户名 / 组织名</label>
-      <input id="owner" value="HerenYU2007" placeholder="例如 HerenYU2007">
-      <details class="picker">
-        <summary>选择常用用户</summary>
-        <div class="picker-body">
-          <button type="button" class="ownerChoice" data-owner="BobbyWch">BobbyWch</button>
-          <button type="button" class="ownerChoice" data-owner="HerenYU2007">HerenYU2007</button>
-        </div>
-      </details>
+      <input id="owner" type="hidden" value="HerenYU2007">
+      <p class="muted">固定用户：<code>HerenYU2007</code></p>
       <label>仓库名</label>
       <input id="repo" value="mc-cc-scripts" placeholder="例如 mc-cc-scripts">
       <div class="row">
@@ -330,7 +330,8 @@ end
 
   <script>
     const $ = (id) => document.getElementById(id);
-    const fields = ["token", "owner", "repo", "branch", "folder"];
+    const FIXED_OWNER = "HerenYU2007";
+    const fields = ["token", "repo", "branch", "folder"];
 
     function setStatus(text) {
       $("status").textContent = text;
@@ -349,7 +350,7 @@ end
 
     function publicCfg() {
       return {
-        owner: $("owner").value.trim(),
+        owner: FIXED_OWNER,
         repo: $("repo").value.trim(),
         branch: $("branch").value.trim() || "main",
         folder: cleanFolder($("folder").value.trim() || "scripts")
@@ -358,8 +359,8 @@ end
 
     function cfg() {
       const c = publicCfg();
-      c.token = $("token").value.trim();
-      if (!c.owner || !c.repo) throw new Error("请填写用户名和仓库名。");
+      c.token = $("token").value.trim() || localStorage.getItem("ccHub.token") || "";
+      if (!c.repo) throw new Error("请填写仓库名。");
       if (!c.token) throw new Error("请填写 GitHub Token。");
       return c;
     }
@@ -386,13 +387,28 @@ end
         const value = localStorage.getItem("ccHub." + id);
         if (value !== null) $(id).value = value;
       }
+      refreshTokenUi();
       updateCommands();
     }
 
     function saveSettings() {
       for (const id of fields) localStorage.setItem("ccHub." + id, $(id).value.trim());
+      refreshTokenUi();
       updateCommands();
       setStatus("设置已保存到当前浏览器。");
+    }
+
+    function refreshTokenUi() {
+      const hasToken = Boolean(localStorage.getItem("ccHub.token") || $("token").value.trim());
+      $("tokenEntry").style.display = hasToken ? "none" : "block";
+      $("tokenSaved").style.display = hasToken ? "block" : "none";
+    }
+
+    function resetToken() {
+      localStorage.removeItem("ccHub.token");
+      $("token").value = "";
+      refreshTokenUi();
+      setStatus("Token 已清除，请重新填写后保存。");
     }
 
     function utf8ToBase64(str) {
@@ -512,20 +528,14 @@ end
     }
 
     $("saveSettings").onclick = saveSettings;
+    $("resetToken").onclick = resetToken;
     $("loadFiles").onclick = () => loadFiles().catch(err => setStatus("错误：" + err.message));
     $("upload").onclick = () => uploadCurrent().catch(err => setStatus("错误：" + err.message));
     $("loadSelected").onclick = () => loadCurrent().catch(err => setStatus("错误：" + err.message));
     $("uploadCcget").onclick = () => uploadCcget().catch(err => setStatus("错误：" + err.message));
     $("copyRaw").onclick = () => copyText(rawUrl(publicCfg(), scriptPath(publicCfg(), $("filename").value)));
     $("copyPull").onclick = () => copyText(`ccget pull ${cleanFileName($("filename").value)}`);
-    for (const id of ["owner", "repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
-    for (const button of document.querySelectorAll(".ownerChoice")) {
-      button.addEventListener("click", () => {
-        $("owner").value = button.dataset.owner;
-        updateCommands();
-        setStatus(`已选择用户：${button.dataset.owner}`);
-      });
-    }
+    for (const id of ["repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
     loadSettings();
   </script>
 </body>
