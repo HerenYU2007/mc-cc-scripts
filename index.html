@@ -88,6 +88,27 @@
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .picker {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel2);
+      overflow: hidden;
+    }
+    .picker summary {
+      cursor: pointer;
+      padding: 8px 10px;
+      color: var(--muted);
+      user-select: none;
+    }
+    .picker .picker-body {
+      display: grid;
+      gap: 8px;
+      padding: 0 10px 10px;
+    }
+    .picker button {
+      text-align: left;
+    }
     .muted { color: var(--muted); }
     .status {
       color: var(--muted);
@@ -140,9 +161,16 @@
       <label>GitHub Token</label>
       <input id="token" type="password" autocomplete="off" placeholder="ghp_... 或 fine-grained token">
       <label>用户名 / 组织名</label>
-      <input id="owner" placeholder="例如 HerenYU2007">
+      <input id="owner" value="HerenYU2007" placeholder="例如 HerenYU2007">
+      <details class="picker">
+        <summary>选择常用用户</summary>
+        <div class="picker-body">
+          <button type="button" class="ownerChoice" data-owner="BobbyWch">BobbyWch</button>
+          <button type="button" class="ownerChoice" data-owner="HerenYU2007">HerenYU2007</button>
+        </div>
+      </details>
       <label>仓库名</label>
-      <input id="repo" placeholder="例如 mc-cc-scripts">
+      <input id="repo" value="mc-cc-scripts" placeholder="例如 mc-cc-scripts">
       <div class="row">
         <div>
           <label>分支</label>
@@ -491,6 +519,13 @@ end
     $("copyRaw").onclick = () => copyText(rawUrl(publicCfg(), scriptPath(publicCfg(), $("filename").value)));
     $("copyPull").onclick = () => copyText(`ccget pull ${cleanFileName($("filename").value)}`);
     for (const id of ["owner", "repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
+    for (const button of document.querySelectorAll(".ownerChoice")) {
+      button.addEventListener("click", () => {
+        $("owner").value = button.dataset.owner;
+        updateCommands();
+        setStatus(`已选择用户：${button.dataset.owner}`);
+      });
+    }
     loadSettings();
   </script>
 </body>
