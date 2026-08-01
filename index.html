@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CC:Tweaked GitHub Code Hub</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel2: #0f1620;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #2ea043;
+      --blue: #58a6ff;
+      --red: #f85149;
+      --yellow: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    h1 { font-size: 18px; margin: 0; }
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 57px);
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    label {
+      display: block;
+      color: var(--muted);
+      margin: 10px 0 5px;
+      font-size: 12px;
+    }
+    input, textarea, button, select {
+      font: inherit;
+    }
+    input, textarea {
+      width: 100%;
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      outline: none;
+    }
+    textarea {
+      min-height: 520px;
+      resize: vertical;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      line-height: 1.35;
+      tab-size: 2;
+    }
+    button {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--green);
+      border-color: #3fb950;
+      color: white;
+      font-weight: 700;
+    }
+    button.danger { color: var(--red); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .muted { color: var(--muted); }
+    .status {
+      color: var(--muted);
+      white-space: pre-wrap;
+      min-height: 44px;
+      border-top: 1px solid var(--border);
+      margin-top: 12px;
+      padding-top: 10px;
+    }
+    .files {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .file {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .file:last-child { border-bottom: 0; }
+    .file code { color: var(--blue); word-break: break-all; }
+    code {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 5px;
+    }
+    a { color: var(--blue); }
+    .wide { min-width: 0; }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      textarea { min-height: 380px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CC:Tweaked GitHub Code Hub</h1>
+    <div class="muted">GitHub Pages + GitHub API + CC wget</div>
+  </header>
+  <main>
+    <section>
+      <h2>浠撳簱璁剧疆</h2>
+      <label>GitHub Token</label>
+      <input id="token" type="password" autocomplete="off" placeholder="ghp_... 鎴?fine-grained token">
+      <label>鐢ㄦ埛鍚?/ 缁勭粐</label>
+      <input id="owner" placeholder="渚嬪 HerenYU">
+      <label>浠撳簱鍚?/label>
+      <input id="repo" placeholder="渚嬪 mc-cc-scripts">
+      <div class="row">
+        <div>
+          <label>鍒嗘敮</label>
+          <input id="branch" value="main">
+        </div>
+        <div>
+          <label>浠ｇ爜鐩綍</label>
+          <input id="folder" value="scripts">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="saveSettings">淇濆瓨璁剧疆</button>
+        <button id="loadFiles">鍒锋柊鍒楄〃</button>
+        <button id="uploadCcget">涓婁紶 ccget.lua</button>
+      </div>
+      <p class="muted">Token 鍙繚瀛樺湪褰撳墠娴忚鍣ㄦ湰鍦般€傚叕寮€浠撳簱鏇撮€傚悎 CC 鐢佃剳涓嬭浇銆?/p>
+      <h2>CC 瀹夎鍛戒护</h2>
+      <p><code id="installCommand">鍏堝～鍐欎粨搴撹缃?/code></p>
+      <p><code id="setupCommand">ccget setup owner repo main scripts</code></p>
+      <h2>鏂囦欢鍒楄〃</h2>
+      <div id="files" class="files"></div>
+      <div id="status" class="status"></div>
+    </section>
+    <section class="wide">
+      <h2>涓婁紶 / 缂栬緫 Lua</h2>
+      <label>鏂囦欢鍚?/label>
+      <input id="filename" value="program.lua" placeholder="farm.lua">
+      <label>浠ｇ爜</label>
+      <textarea id="content" spellcheck="false" placeholder="鍦ㄨ繖閲岀矘璐?Lua 浠ｇ爜"></textarea>
+      <div class="actions">
+        <button id="upload" class="primary">涓婁紶鍒?GitHub</button>
+        <button id="loadSelected">浠?GitHub 璇诲彇褰撳墠鏂囦欢</button>
+        <button id="copyRaw">澶嶅埗 Raw 閾炬帴</button>
+        <button id="copyPull">澶嶅埗 CC 涓嬭浇鍛戒护</button>
+      </div>
+      <p class="muted">涓婁紶鍚庝細鑷姩鏇存柊 <code>manifest.txt</code>锛孋C 閲屽彲浠ョ敤 <code>ccget list</code> 鏌ョ湅銆?/p>
+    </section>
+  </main>
+
+  <script id="ccgetSource" type="text/plain">local CONFIG_FILE = ".ccget"
+
+local function usage()
+  print("CC GitHub Code Hub")
+  print("ccget setup <owner> <repo> [branch] [folder]")
+  print("ccget list")
+  print("ccget pull <remote.lua> [local]")
+  print("ccget run <remote.lua> [args...]")
+  print("ccget url <remote.lua>")
+  print("ccget update")
+end
+
+local function save_config(cfg)
+  local h = fs.open(CONFIG_FILE, "w")
+  h.write(textutils.serialize(cfg))
+  h.close()
+end
+
+local function load_config()
+  if not fs.exists(CONFIG_FILE) then
+    error("Not configured. Run: ccget setup <owner> <repo> [branch] [folder]", 0)
+  end
+  local h = fs.open(CONFIG_FILE, "r")
+  local text = h.readAll()
+  h.close()
+  local cfg = textutils.unserialize(text)
+  if type(cfg) ~= "table" or not cfg.owner or not cfg.repo then
+    error("Bad config. Run setup again.", 0)
+  end
+  cfg.branch = cfg.branch or "main"
+  cfg.folder = cfg.folder or "scripts"
+  return cfg
+end
+
+local function encode_path(s)
+  return tostring(s):gsub(" ", "%%20"):gsub("#", "%%23"):gsub("%?", "%%3F")
+end
+
+local function normalize_name(name)
+  if not name or name == "" then error("Missing file name", 0) end
+  if not name:match("%.lua$") then name = name .. ".lua" end
+  return name
+end
+
+local function raw_base(cfg)
+  return "https://raw.githubusercontent.com/" .. cfg.owner .. "/" .. cfg.repo .. "/" .. cfg.branch .. "/"
+end
+
+local function script_url(cfg, name)
+  name = normalize_name(name)
+  local folder = cfg.folder
+  if folder ~= "" and folder:sub(-1) ~= "/" then folder = folder .. "/" end
+  return raw_base(cfg) .. encode_path(folder .. name)
+end
+
+local function get(url)
+  local h, err = http.get(url)
+  if not h then error(err or ("HTTP failed: " .. url), 0) end
+  local text = h.readAll()
+  h.close()
+  return text
+end
+
+local args = {...}
+local cmd = args[1]
+
+if cmd == "setup" then
+  local owner, repo = args[2], args[3]
+  if not owner or not repo then return usage() end
+  local cfg = {
+    owner = owner,
+    repo = repo,
+    branch = args[4] or "main",
+    folder = args[5] or "scripts"
+  }
+  save_config(cfg)
+  print("Configured " .. owner .. "/" .. repo)
+elseif cmd == "list" then
+  local cfg = load_config()
+  print(get(raw_base(cfg) .. "manifest.txt"))
+elseif cmd == "pull" then
+  local cfg = load_config()
+  local remote = normalize_name(args[2])
+  local local_path = args[3] or remote
+  local text = get(script_url(cfg, remote))
+  local h = fs.open(local_path, "w")
+  h.write(text)
+  h.close()
+  print("Saved " .. local_path)
+elseif cmd == "run" then
+  local cfg = load_config()
+  local remote = normalize_name(args[2])
+  local temp = ".ccget_run"
+  local text = get(script_url(cfg, remote))
+  local h = fs.open(temp, "w")
+  h.write(text)
+  h.close()
+  local run_args = {}
+  for i = 3, #args do table.insert(run_args, args[i]) end
+  shell.run(temp, table.unpack(run_args))
+elseif cmd == "url" then
+  local cfg = load_config()
+  print(script_url(cfg, args[2]))
+elseif cmd == "update" then
+  local cfg = load_config()
+  local text = get(raw_base(cfg) .. "ccget.lua")
+  local h = fs.open("ccget", "w")
+  h.write(text)
+  h.close()
+  print("Updated ccget")
+else
+  usage()
+end
+</script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const fields = ["token", "owner", "repo", "branch", "folder"];
+
+    function setStatus(text) {
+      $("status").textContent = text;
+    }
+
+    function loadSettings() {
+      for (const id of fields) {
+        const value = localStorage.getItem("ccHub." + id);
+        if (value !== null) $(id).value = value;
+      }
+      updateCommands();
+    }
+
+    function saveSettings() {
+      for (const id of fields) localStorage.setItem("ccHub." + id, $(id).value.trim());
+      updateCommands();
+      setStatus("璁剧疆宸蹭繚瀛樸€?);
+    }
+
+    function cfg() {
+      const c = {};
+      for (const id of fields) c[id] = $(id).value.trim();
+      c.branch = c.branch || "main";
+      c.folder = cleanFolder(c.folder || "scripts");
+      if (!c.owner || !c.repo) throw new Error("璇峰～鍐欑敤鎴峰悕鍜屼粨搴撳悕銆?);
+      if (!c.token) throw new Error("璇峰～鍐?GitHub Token銆?);
+      return c;
+    }
+
+    function publicCfg() {
+      return {
+        owner: $("owner").value.trim(),
+        repo: $("repo").value.trim(),
+        branch: $("branch").value.trim() || "main",
+        folder: cleanFolder($("folder").value.trim() || "scripts")
+      };
+    }
+
+    function cleanFolder(folder) {
+      return folder.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9._/-]/g, "");
+    }
+
+    function cleanFileName(name) {
+      name = (name || "program.lua").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+      name = name.split("/").map(part => part.replace(/[^A-Za-z0-9._-]/g, "_")).filter(Boolean).join("/");
+      if (!name.endsWith(".lua")) name += ".lua";
+      return name || "program.lua";
+    }
+
+    function scriptPath(c, name) {
+      name = cleanFileName(name);
+      return c.folder ? `${c.folder}/${name}` : name;
+    }
+
+    function rawUrl(c, path) {
+      return `https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch}/${path.split("/").map(encodeURIComponent).join("/")}`;
+    }
+
+    function updateCommands() {
+      const c = publicCfg();
+      if (c.owner && c.repo) {
+        $("installCommand").textContent = `wget ${rawUrl(c, "ccget.lua")} ccget`;
+        $("setupCommand").textContent = `ccget setup ${c.owner} ${c.repo} ${c.branch} ${c.folder}`;
+      }
+    }
+
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      const size = 0x8000;
+      for (let i = 0; i < bytes.length; i += size) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + size));
+      }
+      return btoa(binary);
+    }
+
+    function base64ToUtf8(base64) {
+      const binary = atob(base64.replace(/\n/g, ""));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    async function github(path, options = {}) {
+      const c = cfg();
+      const url = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${path}`;
+      const res = await fetch(url + (options.query || ""), {
+        method: options.method || "GET",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${c.token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(options.headers || {})
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+      if (res.status === 404) return null;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `GitHub API ${res.status}`);
+      return data;
+    }
+
+    async function getContent(path) {
+      const c = cfg();
+      const data = await github(path, { query: `?ref=${encodeURIComponent(c.branch)}` });
+      if (!data) return null;
+      return data;
+    }
+
+    async function putContent(path, content, message) {
+      const c = cfg();
+      const existing = await getContent(path);
+      const body = {
+        message,
+        content: utf8ToBase64(content),
+        branch: c.branch
+      };
+      if (existing && existing.sha) body.sha = existing.sha;
+      return github(path, { method: "PUT", body });
+    }
+
+    async function updateManifest(fileName) {
+      const manifestPath = "manifest.txt";
+      let names = [];
+      const existing = await getContent(manifestPath);
+      if (existing && existing.content) {
+        names = base64ToUtf8(existing.content).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      }
+      if (!names.includes(fileName)) names.push(fileName);
+      names.sort((a, b) => a.localeCompare(b));
+      await putContent(manifestPath, names.join("\n") + "\n", `Update manifest for ${fileName}`);
+    }
+
+    async function uploadCurrent() {
+      const c = cfg();
+      const name = cleanFileName($("filename").value);
+      $("filename").value = name;
+      const path = scriptPath(c, name);
+      await putContent(path, $("content").value, `Update ${path}`);
+      await updateManifest(name);
+      setStatus(`宸蹭笂浼狅細${path}\nRaw锛?{rawUrl(c, path)}`);
+      await loadFiles();
+    }
+
+    async function loadCurrent() {
+      const c = cfg();
+      const name = cleanFileName($("filename").value);
+      const path = scriptPath(c, name);
+      const data = await getContent(path);
+      if (!data || !data.content) throw new Error("GitHub 涓婃病鏈夎繖涓枃浠躲€?);
+      $("filename").value = name;
+      $("content").value = base64ToUtf8(data.content);
+      setStatus(`宸茶鍙栵細${path}`);
+    }
+
+    async function uploadCcget() {
+      const source = $("ccgetSource").textContent;
+      await putContent("ccget.lua", source, "Update ccget.lua");
+      setStatus("宸蹭笂浼?ccget.lua銆?);
+      updateCommands();
+    }
+
+    async function loadFiles() {
+      const c = cfg();
+      const data = await github(c.folder || "", { query: `?ref=${encodeURIComponent(c.branch)}` });
+      const files = Array.isArray(data) ? data.filter(x => x.type === "file" && x.name.endsWith(".lua")) : [];
+      $("files").innerHTML = files.length ? "" : "<div class='file'><span class='muted'>娌℃湁 Lua 鏂囦欢</span></div>";
+      for (const item of files) {
+        const name = item.path.substring((c.folder ? c.folder.length + 1 : 0));
+        const row = document.createElement("div");
+        row.className = "file";
+        row.innerHTML = `<code>${name}</code><button type="button">缂栬緫</button>`;
+        row.querySelector("button").onclick = async () => {
+          $("filename").value = name;
+          await loadCurrent();
+        };
+        $("files").appendChild(row);
+      }
+      setStatus(`宸插埛鏂帮紝鎵惧埌 ${files.length} 涓?Lua 鏂囦欢銆俙);
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+      setStatus("宸插鍒讹細\n" + text);
+    }
+
+    $("saveSettings").onclick = saveSettings;
+    $("loadFiles").onclick = () => loadFiles().catch(err => setStatus("閿欒锛? + err.message));
+    $("upload").onclick = () => uploadCurrent().catch(err => setStatus("閿欒锛? + err.message));
+    $("loadSelected").onclick = () => loadCurrent().catch(err => setStatus("閿欒锛? + err.message));
+    $("uploadCcget").onclick = () => uploadCcget().catch(err => setStatus("閿欒锛? + err.message));
+    $("copyRaw").onclick = () => {
+      const c = publicCfg();
+      copyText(rawUrl(c, scriptPath(c, $("filename").value)));
+    };
+    $("copyPull").onclick = () => {
+      const name = cleanFileName($("filename").value);
+      copyText(`ccget pull ${name}`);
+    };
+    for (const id of ["owner", "repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
+    loadSettings();
+  </script>
+</body>
+</html>
