@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CC:Tweaked GitHub Code Hub</title>
+  <title>CC:Tweaked GitHub 代码仓库</title>
   <style>
     :root {
       color-scheme: dark;
@@ -16,14 +16,13 @@
       --green: #2ea043;
       --blue: #58a6ff;
       --red: #f85149;
-      --yellow: #d29922;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font: 14px/1.45 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      font: 14px/1.45 "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
     }
     header {
       border-bottom: 1px solid var(--border);
@@ -34,6 +33,7 @@
       gap: 16px;
     }
     h1 { font-size: 18px; margin: 0; }
+    h2 { margin: 8px 0 14px; font-size: 18px; }
     main {
       display: grid;
       grid-template-columns: 360px 1fr;
@@ -53,9 +53,7 @@
       margin: 10px 0 5px;
       font-size: 12px;
     }
-    input, textarea, button, select {
-      font: inherit;
-    }
+    input, textarea, button { font: inherit; }
     input, textarea {
       width: 100%;
       background: var(--panel2);
@@ -86,7 +84,6 @@
       color: white;
       font-weight: 700;
     }
-    button.danger { color: var(--red); }
     button:disabled { opacity: .55; cursor: not-allowed; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
@@ -134,54 +131,57 @@
 </head>
 <body>
   <header>
-    <h1>CC:Tweaked GitHub Code Hub</h1>
+    <h1>CC:Tweaked GitHub 代码仓库</h1>
     <div class="muted">GitHub Pages + GitHub API + CC wget</div>
   </header>
   <main>
     <section>
-      <h2>浠撳簱璁剧疆</h2>
+      <h2>仓库设置</h2>
       <label>GitHub Token</label>
-      <input id="token" type="password" autocomplete="off" placeholder="ghp_... 鎴?fine-grained token">
-      <label>鐢ㄦ埛鍚?/ 缁勭粐</label>
-      <input id="owner" placeholder="渚嬪 HerenYU">
-      <label>浠撳簱鍚?/label>
-      <input id="repo" placeholder="渚嬪 mc-cc-scripts">
+      <input id="token" type="password" autocomplete="off" placeholder="ghp_... 或 fine-grained token">
+      <label>用户名 / 组织名</label>
+      <input id="owner" placeholder="例如 HerenYU2007">
+      <label>仓库名</label>
+      <input id="repo" placeholder="例如 mc-cc-scripts">
       <div class="row">
         <div>
-          <label>鍒嗘敮</label>
+          <label>分支</label>
           <input id="branch" value="main">
         </div>
         <div>
-          <label>浠ｇ爜鐩綍</label>
+          <label>脚本目录</label>
           <input id="folder" value="scripts">
         </div>
       </div>
       <div class="actions">
-        <button id="saveSettings">淇濆瓨璁剧疆</button>
-        <button id="loadFiles">鍒锋柊鍒楄〃</button>
-        <button id="uploadCcget">涓婁紶 ccget.lua</button>
+        <button id="saveSettings">保存设置</button>
+        <button id="loadFiles">刷新文件列表</button>
+        <button id="uploadCcget">更新 ccget.lua</button>
       </div>
-      <p class="muted">Token 鍙繚瀛樺湪褰撳墠娴忚鍣ㄦ湰鍦般€傚叕寮€浠撳簱鏇撮€傚悎 CC 鐢佃剳涓嬭浇銆?/p>
-      <h2>CC 瀹夎鍛戒护</h2>
-      <p><code id="installCommand">鍏堝～鍐欎粨搴撹缃?/code></p>
+      <p class="muted">Token 只保存在当前浏览器本地，用来把 Lua 代码上传到这个 GitHub 仓库；不会发给服务器。</p>
+
+      <h2>CC 电脑安装命令</h2>
+      <p><code id="installCommand">先填写仓库设置</code></p>
       <p><code id="setupCommand">ccget setup owner repo main scripts</code></p>
-      <h2>鏂囦欢鍒楄〃</h2>
+
+      <h2>仓库文件</h2>
       <div id="files" class="files"></div>
       <div id="status" class="status"></div>
     </section>
+
     <section class="wide">
-      <h2>涓婁紶 / 缂栬緫 Lua</h2>
-      <label>鏂囦欢鍚?/label>
+      <h2>上传 / 编辑 Lua</h2>
+      <label>文件名</label>
       <input id="filename" value="program.lua" placeholder="farm.lua">
-      <label>浠ｇ爜</label>
-      <textarea id="content" spellcheck="false" placeholder="鍦ㄨ繖閲岀矘璐?Lua 浠ｇ爜"></textarea>
+      <label>代码内容</label>
+      <textarea id="content" spellcheck="false" placeholder="在这里粘贴 Lua 代码"></textarea>
       <div class="actions">
-        <button id="upload" class="primary">涓婁紶鍒?GitHub</button>
-        <button id="loadSelected">浠?GitHub 璇诲彇褰撳墠鏂囦欢</button>
-        <button id="copyRaw">澶嶅埗 Raw 閾炬帴</button>
-        <button id="copyPull">澶嶅埗 CC 涓嬭浇鍛戒护</button>
+        <button id="upload" class="primary">上传到 GitHub</button>
+        <button id="loadSelected">从 GitHub 读取当前文件</button>
+        <button id="copyRaw">复制 Raw 链接</button>
+        <button id="copyPull">复制 CC 下载命令</button>
       </div>
-      <p class="muted">涓婁紶鍚庝細鑷姩鏇存柊 <code>manifest.txt</code>锛孋C 閲屽彲浠ョ敤 <code>ccget list</code> 鏌ョ湅銆?/p>
+      <p class="muted">上传成功后会自动更新 <code>manifest.txt</code>，游戏里的 CC 电脑可以用 <code>ccget list</code> 查看文件。</p>
     </section>
   </main>
 
@@ -299,45 +299,13 @@ else
   usage()
 end
 </script>
+
   <script>
     const $ = (id) => document.getElementById(id);
     const fields = ["token", "owner", "repo", "branch", "folder"];
 
     function setStatus(text) {
       $("status").textContent = text;
-    }
-
-    function loadSettings() {
-      for (const id of fields) {
-        const value = localStorage.getItem("ccHub." + id);
-        if (value !== null) $(id).value = value;
-      }
-      updateCommands();
-    }
-
-    function saveSettings() {
-      for (const id of fields) localStorage.setItem("ccHub." + id, $(id).value.trim());
-      updateCommands();
-      setStatus("璁剧疆宸蹭繚瀛樸€?);
-    }
-
-    function cfg() {
-      const c = {};
-      for (const id of fields) c[id] = $(id).value.trim();
-      c.branch = c.branch || "main";
-      c.folder = cleanFolder(c.folder || "scripts");
-      if (!c.owner || !c.repo) throw new Error("璇峰～鍐欑敤鎴峰悕鍜屼粨搴撳悕銆?);
-      if (!c.token) throw new Error("璇峰～鍐?GitHub Token銆?);
-      return c;
-    }
-
-    function publicCfg() {
-      return {
-        owner: $("owner").value.trim(),
-        repo: $("repo").value.trim(),
-        branch: $("branch").value.trim() || "main",
-        folder: cleanFolder($("folder").value.trim() || "scripts")
-      };
     }
 
     function cleanFolder(folder) {
@@ -349,6 +317,23 @@ end
       name = name.split("/").map(part => part.replace(/[^A-Za-z0-9._-]/g, "_")).filter(Boolean).join("/");
       if (!name.endsWith(".lua")) name += ".lua";
       return name || "program.lua";
+    }
+
+    function publicCfg() {
+      return {
+        owner: $("owner").value.trim(),
+        repo: $("repo").value.trim(),
+        branch: $("branch").value.trim() || "main",
+        folder: cleanFolder($("folder").value.trim() || "scripts")
+      };
+    }
+
+    function cfg() {
+      const c = publicCfg();
+      c.token = $("token").value.trim();
+      if (!c.owner || !c.repo) throw new Error("请填写用户名和仓库名。");
+      if (!c.token) throw new Error("请填写 GitHub Token。");
+      return c;
     }
 
     function scriptPath(c, name) {
@@ -366,6 +351,20 @@ end
         $("installCommand").textContent = `wget ${rawUrl(c, "ccget.lua")} ccget`;
         $("setupCommand").textContent = `ccget setup ${c.owner} ${c.repo} ${c.branch} ${c.folder}`;
       }
+    }
+
+    function loadSettings() {
+      for (const id of fields) {
+        const value = localStorage.getItem("ccHub." + id);
+        if (value !== null) $(id).value = value;
+      }
+      updateCommands();
+    }
+
+    function saveSettings() {
+      for (const id of fields) localStorage.setItem("ccHub." + id, $(id).value.trim());
+      updateCommands();
+      setStatus("设置已保存到当前浏览器。");
     }
 
     function utf8ToBase64(str) {
@@ -406,9 +405,7 @@ end
 
     async function getContent(path) {
       const c = cfg();
-      const data = await github(path, { query: `?ref=${encodeURIComponent(c.branch)}` });
-      if (!data) return null;
-      return data;
+      return github(path, { query: `?ref=${encodeURIComponent(c.branch)}` });
     }
 
     async function putContent(path, content, message) {
@@ -424,15 +421,14 @@ end
     }
 
     async function updateManifest(fileName) {
-      const manifestPath = "manifest.txt";
+      const existing = await getContent("manifest.txt");
       let names = [];
-      const existing = await getContent(manifestPath);
       if (existing && existing.content) {
         names = base64ToUtf8(existing.content).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
       }
       if (!names.includes(fileName)) names.push(fileName);
       names.sort((a, b) => a.localeCompare(b));
-      await putContent(manifestPath, names.join("\n") + "\n", `Update manifest for ${fileName}`);
+      await putContent("manifest.txt", names.join("\n") + "\n", `Update manifest for ${fileName}`);
     }
 
     async function uploadCurrent() {
@@ -442,7 +438,7 @@ end
       const path = scriptPath(c, name);
       await putContent(path, $("content").value, `Update ${path}`);
       await updateManifest(name);
-      setStatus(`宸蹭笂浼狅細${path}\nRaw锛?{rawUrl(c, path)}`);
+      setStatus(`上传成功：${path}\nRaw：${rawUrl(c, path)}`);
       await loadFiles();
     }
 
@@ -451,16 +447,15 @@ end
       const name = cleanFileName($("filename").value);
       const path = scriptPath(c, name);
       const data = await getContent(path);
-      if (!data || !data.content) throw new Error("GitHub 涓婃病鏈夎繖涓枃浠躲€?);
+      if (!data || !data.content) throw new Error("GitHub 上没有找到这个文件。");
       $("filename").value = name;
       $("content").value = base64ToUtf8(data.content);
-      setStatus(`宸茶鍙栵細${path}`);
+      setStatus(`已读取：${path}`);
     }
 
     async function uploadCcget() {
-      const source = $("ccgetSource").textContent;
-      await putContent("ccget.lua", source, "Update ccget.lua");
-      setStatus("宸蹭笂浼?ccget.lua銆?);
+      await putContent("ccget.lua", $("ccgetSource").textContent, "Update ccget.lua");
+      setStatus("ccget.lua 已更新。");
       updateCommands();
     }
 
@@ -468,39 +463,33 @@ end
       const c = cfg();
       const data = await github(c.folder || "", { query: `?ref=${encodeURIComponent(c.branch)}` });
       const files = Array.isArray(data) ? data.filter(x => x.type === "file" && x.name.endsWith(".lua")) : [];
-      $("files").innerHTML = files.length ? "" : "<div class='file'><span class='muted'>娌℃湁 Lua 鏂囦欢</span></div>";
+      $("files").innerHTML = files.length ? "" : "<div class='file'><span class='muted'>还没有 Lua 文件</span></div>";
       for (const item of files) {
-        const name = item.path.substring((c.folder ? c.folder.length + 1 : 0));
+        const name = item.path.substring(c.folder ? c.folder.length + 1 : 0);
         const row = document.createElement("div");
         row.className = "file";
-        row.innerHTML = `<code>${name}</code><button type="button">缂栬緫</button>`;
+        row.innerHTML = `<code>${name}</code><button type="button">读取</button>`;
         row.querySelector("button").onclick = async () => {
           $("filename").value = name;
           await loadCurrent();
         };
         $("files").appendChild(row);
       }
-      setStatus(`宸插埛鏂帮紝鎵惧埌 ${files.length} 涓?Lua 鏂囦欢銆俙);
+      setStatus(`已刷新：找到 ${files.length} 个 Lua 文件。`);
     }
 
     async function copyText(text) {
       await navigator.clipboard.writeText(text);
-      setStatus("宸插鍒讹細\n" + text);
+      setStatus("已复制：\n" + text);
     }
 
     $("saveSettings").onclick = saveSettings;
-    $("loadFiles").onclick = () => loadFiles().catch(err => setStatus("閿欒锛? + err.message));
-    $("upload").onclick = () => uploadCurrent().catch(err => setStatus("閿欒锛? + err.message));
-    $("loadSelected").onclick = () => loadCurrent().catch(err => setStatus("閿欒锛? + err.message));
-    $("uploadCcget").onclick = () => uploadCcget().catch(err => setStatus("閿欒锛? + err.message));
-    $("copyRaw").onclick = () => {
-      const c = publicCfg();
-      copyText(rawUrl(c, scriptPath(c, $("filename").value)));
-    };
-    $("copyPull").onclick = () => {
-      const name = cleanFileName($("filename").value);
-      copyText(`ccget pull ${name}`);
-    };
+    $("loadFiles").onclick = () => loadFiles().catch(err => setStatus("错误：" + err.message));
+    $("upload").onclick = () => uploadCurrent().catch(err => setStatus("错误：" + err.message));
+    $("loadSelected").onclick = () => loadCurrent().catch(err => setStatus("错误：" + err.message));
+    $("uploadCcget").onclick = () => uploadCcget().catch(err => setStatus("错误：" + err.message));
+    $("copyRaw").onclick = () => copyText(rawUrl(publicCfg(), scriptPath(publicCfg(), $("filename").value)));
+    $("copyPull").onclick = () => copyText(`ccget pull ${cleanFileName($("filename").value)}`);
     for (const id of ["owner", "repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
     loadSettings();
   </script>
