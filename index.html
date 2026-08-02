@@ -136,6 +136,26 @@
     }
     .file:last-child { border-bottom: 0; }
     .file code { color: var(--blue); word-break: break-all; }
+    .file-group {
+      border-bottom: 1px solid var(--border);
+    }
+    .file-group:last-child { border-bottom: 0; }
+    .file-group summary {
+      cursor: pointer;
+      padding: 9px 10px;
+      color: var(--text);
+      background: var(--panel2);
+      user-select: none;
+    }
+    .file-group .muted {
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .file-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
     code {
       background: var(--panel2);
       border: 1px solid var(--border);
@@ -454,6 +474,20 @@ end
       return data;
     }
 
+    async function githubApi(url) {
+      const c = cfg();
+      const res = await fetch(url, {
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${c.token}`,
+          "X-GitHub-Api-Version": "2022-11-28"
+        }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `GitHub API ${res.status}`);
+      return data;
+    }
+
     async function getContent(path) {
       const c = cfg();
       return github(path, { query: `?ref=${encodeURIComponent(c.branch)}` });
@@ -510,7 +544,67 @@ end
       updateCommands();
     }
 
-    async function loadFiles() {
+    async function fetchFileMeta(c, item) {
+      const commitsUrl = `https://api.github.com/repos/${c.owner}/${c.repo}/commits?sha=${encodeURIComponent(c.branch)}&path=${encodeURIComponent(item.path)}&per_page=1`;
+      const commits = await githubApi(commitsUrl);
+      const latest = Array.isArray(commits) ? commits[0] : null;
+      const dateText = latest?.commit?.committer?.date || latest?.commit?.author?.date || null;
+      const updatedAt = dateText ? new Date(dateText) : null;
+      return { ...item, updatedAt };
+    }
+
+    function groupFiles(files) {
+      const now = new Date();
+      const dayMs = 24 * 60 * 60 * 1000;
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const groups = [
+        { title: "今日内", items: [], open: true },
+        { title: "7天内", items: [], open: true },
+        { title: "30天内", items: [], open: false },
+        { title: "更早", items: [], open: false }
+      ];
+      for (const file of files) {
+        if (!file.updatedAt || Number.isNaN(file.updatedAt.getTime())) {
+          groups[3].items.push(file);
+          continue;
+        }
+        if (file.updatedAt >= startOfToday) {
+          groups[0].items.push(file);
+        } else {
+          const ageDays = (now - file.updatedAt) / dayMs;
+          if (ageDays <= 7) groups[1].items.push(file);
+          else if (ageDays <= 30) groups[2].items.push(file);
+          else groups[3].items.push(file);
+        }
+      }
+      return groups;
+    }
+
+    function formatFileDate(date) {
+      if (!date || Number.isNaN(date.getTime())) return "未知时间";
+      return date.toLocaleString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderFileRow(c, item) {
+      const name = item.path.substring(c.folder ? c.folder.length + 1 : 0);
+      const row = document.createElement("div");
+      row.className = "file";
+      row.innerHTML = `<div><code></code><div class="file-meta"></div></div><button type="button">读取</button>`;
+      row.querySelector("code").textContent = name;
+      row.querySelector(".file-meta").textContent = `${formatFileDate(item.updatedAt)} · ${item.size || 0} bytes`;
+      row.querySelector("button").onclick = async () => {
+        $("filename").value = name;
+        await loadCurrent();
+      };
+      return row;
+    }
+
+    async function loadFilesLegacy() {
       const c = cfg();
       const data = await github(c.folder || "", { query: `?ref=${encodeURIComponent(c.branch)}` });
       const files = Array.isArray(data) ? data.filter(x => x.type === "file" && x.name.endsWith(".lua")) : [];
@@ -525,6 +619,33 @@ end
           await loadCurrent();
         };
         $("files").appendChild(row);
+      }
+      setStatus(`已刷新：找到 ${files.length} 个 Lua 文件。`);
+    }
+
+    async function loadFiles() {
+      const c = cfg();
+      $("files").innerHTML = "<div class='file'><span class='muted'>正在刷新文件列表...</span></div>";
+      const data = await github(c.folder || "", { query: `?ref=${encodeURIComponent(c.branch)}` });
+      const files = Array.isArray(data) ? data.filter(x => x.type === "file" && x.name.endsWith(".lua")) : [];
+      if (!files.length) {
+        $("files").innerHTML = "<div class='file'><span class='muted'>还没有 Lua 文件</span></div>";
+        setStatus("已刷新：找到 0 个 Lua 文件。");
+        return;
+      }
+      const withMeta = await Promise.all(files.map(item => fetchFileMeta(c, item).catch(() => ({ ...item, updatedAt: null }))));
+      withMeta.sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0) || a.name.localeCompare(b.name));
+      $("files").innerHTML = "";
+      for (const group of groupFiles(withMeta)) {
+        if (!group.items.length) continue;
+        const details = document.createElement("details");
+        details.className = "file-group";
+        details.open = group.open;
+        const summary = document.createElement("summary");
+        summary.innerHTML = `${group.title}<span class="muted">${group.items.length} 个</span>`;
+        details.appendChild(summary);
+        for (const item of group.items) details.appendChild(renderFileRow(c, item));
+        $("files").appendChild(details);
       }
       setStatus(`已刷新：找到 ${files.length} 个 Lua 文件。`);
     }
@@ -544,6 +665,9 @@ end
     $("copyPull").onclick = () => copyText(`ccget pull ${cleanFileName($("filename").value)}`);
     for (const id of ["repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
     loadSettings();
+    if (localStorage.getItem("ccHub.token") || $("token").value.trim()) {
+      loadFiles().catch(err => setStatus("自动刷新失败：" + err.message));
+    }
   </script>
 </body>
 </html>
