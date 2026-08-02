@@ -234,12 +234,16 @@
   </main>
 
   <script id="ccgetSource" type="text/plain">local CONFIG_FILE = ".ccget"
+local MAX_RETRIES = 4
+local RETRY_WAIT = 1.5
+local REQUEST_COOLDOWN = 0.8
 
 local function usage()
   print("CC GitHub Code Hub")
   print("ccget setup <owner> <repo> [branch] [folder]")
   print("ccget list")
   print("ccget pull <remote.lua> [local]")
+  print("ccget pull-all [delay_seconds]")
   print("ccget run <remote.lua> [args...]")
   print("ccget url <remote.lua>")
   print("ccget update")
@@ -288,28 +292,71 @@ local function script_url(cfg, name)
   return raw_base(cfg) .. encode_path(folder .. name)
 end
 
+local function wait(seconds)
+  if sleep then sleep(seconds) end
+end
+
+local function open_http(url)
+  local last_err = nil
+  for attempt = 1, MAX_RETRIES do
+    local h, err = http.get(url, { ["User-Agent"] = "ccget" })
+    if h then return h end
+    last_err = err or "connection failed"
+    print("HTTP failed (" .. attempt .. "/" .. MAX_RETRIES .. "): " .. last_err)
+    wait(RETRY_WAIT * attempt)
+  end
+  error(last_err or ("HTTP failed: " .. url), 0)
+end
+
 local function get(url)
-  local h, err = http.get(url, { ["User-Agent"] = "ccget" })
-  if not h then error(err or ("HTTP failed: " .. url), 0) end
+  local h = open_http(url)
   local text = h.readAll()
   h.close()
+  wait(REQUEST_COOLDOWN)
   return text
 end
 
 local function download_to_file(url, path)
-  local h, err = http.get(url, { ["User-Agent"] = "ccget" })
-  if not h then error(err or ("HTTP failed: " .. url), 0) end
-  local out = fs.open(path, "w")
-  local total = 0
-  while true do
-    local chunk = h.read(8192)
-    if not chunk then break end
-    out.write(chunk)
-    total = total + #chunk
+  local tmp = path .. ".tmp"
+  if fs.exists(tmp) then fs.delete(tmp) end
+  local last_err = nil
+  for attempt = 1, MAX_RETRIES do
+    local ok, result = pcall(function()
+      local h = open_http(url)
+      local out = fs.open(tmp, "w")
+      local total = 0
+      while true do
+        local chunk = h.read(8192)
+        if not chunk then break end
+        out.write(chunk)
+        total = total + #chunk
+        if total % 65536 == 0 then wait(0) end
+      end
+      out.close()
+      h.close()
+      return total
+    end)
+    if ok then
+      if fs.exists(path) then fs.delete(path) end
+      fs.move(tmp, path)
+      wait(REQUEST_COOLDOWN)
+      return result
+    end
+    last_err = tostring(result)
+    if fs.exists(tmp) then fs.delete(tmp) end
+    print("Download retry (" .. attempt .. "/" .. MAX_RETRIES .. "): " .. last_err)
+    wait(RETRY_WAIT * attempt)
   end
-  out.close()
-  h.close()
-  return total
+  error(last_err or ("Download failed: " .. url), 0)
+end
+
+local function manifest_names(text)
+  local names = {}
+  for line in text:gmatch("[^\r\n]+") do
+    line = line:gsub("^%s+", ""):gsub("%s+$", "")
+    if line ~= "" then table.insert(names, normalize_name(line)) end
+  end
+  return names
 end
 
 local args = {...}
@@ -335,6 +382,16 @@ elseif cmd == "pull" then
   local local_path = args[3] or remote
   local bytes = download_to_file(script_url(cfg, remote), local_path)
   print("Saved " .. local_path .. " (" .. bytes .. " bytes)")
+elseif cmd == "pull-all" then
+  local cfg = load_config()
+  local delay = tonumber(args[2]) or 2
+  local names = manifest_names(get(raw_base(cfg) .. "manifest.txt"))
+  for i, name in ipairs(names) do
+    print("Pulling " .. name .. " (" .. i .. "/" .. #names .. ")")
+    local bytes = download_to_file(script_url(cfg, name), name)
+    print("Saved " .. name .. " (" .. bytes .. " bytes)")
+    wait(delay)
+  end
 elseif cmd == "run" then
   local cfg = load_config()
   local remote = normalize_name(args[2])
