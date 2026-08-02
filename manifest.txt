@@ -1,3 +1,4 @@
 basalt.lua
+gui.lua
 program.lua
 test.lua
