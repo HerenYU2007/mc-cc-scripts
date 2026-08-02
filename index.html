@@ -358,6 +358,7 @@ end
   <script>
     const $ = (id) => document.getElementById(id);
     const FIXED_OWNER = "HerenYU2007";
+    const TOKEN_KEY = "ccHub.token";
     const fields = ["token", "repo", "branch", "folder"];
 
     function setStatus(text) {
@@ -386,10 +387,21 @@ end
 
     function cfg() {
       const c = publicCfg();
-      c.token = $("token").value.trim() || localStorage.getItem("ccHub.token") || "";
+      const typedToken = $("token").value.trim();
+      c.token = typedToken || localStorage.getItem(TOKEN_KEY) || "";
+      if (typedToken) localStorage.setItem(TOKEN_KEY, typedToken);
       if (!c.repo) throw new Error("请填写仓库名。");
       if (!c.token) throw new Error("请填写 GitHub Token。");
+      refreshTokenUi();
       return c;
+    }
+
+    function cacheToken() {
+      const token = $("token").value.trim();
+      if (!token) return false;
+      localStorage.setItem(TOKEN_KEY, token);
+      refreshTokenUi();
+      return true;
     }
 
     function scriptPath(c, name) {
@@ -426,13 +438,13 @@ end
     }
 
     function refreshTokenUi() {
-      const hasToken = Boolean(localStorage.getItem("ccHub.token") || $("token").value.trim());
+      const hasToken = Boolean(localStorage.getItem(TOKEN_KEY) || $("token").value.trim());
       $("tokenEntry").style.display = hasToken ? "none" : "block";
       $("tokenSaved").style.display = hasToken ? "block" : "none";
     }
 
     function resetToken() {
-      localStorage.removeItem("ccHub.token");
+      localStorage.removeItem(TOKEN_KEY);
       $("token").value = "";
       refreshTokenUi();
       setStatus("Token 已清除，请重新填写后保存。");
@@ -663,9 +675,15 @@ end
     $("uploadCcget").onclick = () => uploadCcget().catch(err => setStatus("错误：" + err.message));
     $("copyRaw").onclick = () => copyText(rawUrl(publicCfg(), scriptPath(publicCfg(), $("filename").value)));
     $("copyPull").onclick = () => copyText(`ccget pull ${cleanFileName($("filename").value)}`);
+    $("token").addEventListener("change", () => {
+      if (cacheToken()) setStatus("Token 已缓存到当前浏览器。");
+    });
+    $("token").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && cacheToken()) setStatus("Token 已缓存到当前浏览器。");
+    });
     for (const id of ["repo", "branch", "folder"]) $(id).addEventListener("input", updateCommands);
     loadSettings();
-    if (localStorage.getItem("ccHub.token") || $("token").value.trim()) {
+    if (localStorage.getItem(TOKEN_KEY) || $("token").value.trim()) {
       loadFiles().catch(err => setStatus("自动刷新失败：" + err.message));
     }
   </script>
