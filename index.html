@@ -269,11 +269,27 @@ local function script_url(cfg, name)
 end
 
 local function get(url)
-  local h, err = http.get(url)
+  local h, err = http.get(url, { ["User-Agent"] = "ccget" })
   if not h then error(err or ("HTTP failed: " .. url), 0) end
   local text = h.readAll()
   h.close()
   return text
+end
+
+local function download_to_file(url, path)
+  local h, err = http.get(url, { ["User-Agent"] = "ccget" })
+  if not h then error(err or ("HTTP failed: " .. url), 0) end
+  local out = fs.open(path, "w")
+  local total = 0
+  while true do
+    local chunk = h.read(8192)
+    if not chunk then break end
+    out.write(chunk)
+    total = total + #chunk
+  end
+  out.close()
+  h.close()
+  return total
 end
 
 local args = {...}
@@ -297,19 +313,13 @@ elseif cmd == "pull" then
   local cfg = load_config()
   local remote = normalize_name(args[2])
   local local_path = args[3] or remote
-  local text = get(script_url(cfg, remote))
-  local h = fs.open(local_path, "w")
-  h.write(text)
-  h.close()
-  print("Saved " .. local_path)
+  local bytes = download_to_file(script_url(cfg, remote), local_path)
+  print("Saved " .. local_path .. " (" .. bytes .. " bytes)")
 elseif cmd == "run" then
   local cfg = load_config()
   local remote = normalize_name(args[2])
   local temp = ".ccget_run"
-  local text = get(script_url(cfg, remote))
-  local h = fs.open(temp, "w")
-  h.write(text)
-  h.close()
+  download_to_file(script_url(cfg, remote), temp)
   local run_args = {}
   for i = 3, #args do table.insert(run_args, args[i]) end
   shell.run(temp, table.unpack(run_args))
@@ -318,10 +328,7 @@ elseif cmd == "url" then
   print(script_url(cfg, args[2]))
 elseif cmd == "update" then
   local cfg = load_config()
-  local text = get(raw_base(cfg) .. "ccget.lua")
-  local h = fs.open("ccget", "w")
-  h.write(text)
-  h.close()
+  download_to_file(raw_base(cfg) .. "ccget.lua", "ccget")
   print("Updated ccget")
 else
   usage()
