@@ -1,4 +1,5 @@
 basalt.lua
+boot.lua
 gui.lua
 net.lua
 program.lua
