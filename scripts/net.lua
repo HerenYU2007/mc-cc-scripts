@@ -6,6 +6,7 @@ local theName
     state:string    --init/listening/waitAck/connected
     remote:string   --name
     handlers
+    recv?:remote
     fn              --(session,isConnected)
 }
 ]]
@@ -54,6 +55,14 @@ function net.sendPacket(t,d)
         data=d
     })
 end
+function net.msg(session,data)
+    rednet.broadcast({
+        type="msg",
+        sender=theName,
+        recv=session.remote,
+        data=data
+    })
+end
 --[[Packet structure:
 {
     type:connect/msg/disconnect/ack
@@ -79,13 +88,17 @@ function net.onEvent(a,packet)
         listenS=nil
         return
     elseif packet.type~="ack" then
-        if packet.data~=theName or sessions[packet.sender]==nil then
+        local s=sessions[packet.sender]
+        if packet.data~=theName or s==nil then
             return
         end
-        sessions[packet.sender].remote=packet.sender
-        sessions[packet.sender].state="connected"
+        s.remote=packet.sender
+        s.state="connected"
+        if s.fn ~= nil then
+            s.fn(s,true)
+        end
     elseif packet.type~="msg" then
-        if sessions[packet.sender]==nil then
+        if sessions[packet.sender]==nil or packet.recv~=theName then
             return
         end
         local i=1
